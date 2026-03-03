@@ -6,10 +6,12 @@ local combatFrame = CreateFrame("Frame")
 
 function WFC.Combat:Enable()
     combatFrame:RegisterEvent("UNIT_HEALTH")
+    combatFrame:RegisterEvent("UNIT_DIED")
 end
 
 function WFC.Combat:Disable()
     combatFrame:UnregisterEvent("UNIT_HEALTH")
+    combatFrame:UnregisterEvent("UNIT_DIED")
 end
 
 function WFC.Combat:ResetPhases(carrierName)
@@ -27,6 +29,19 @@ combatFrame:SetScript("OnEvent", function()
             local hp = UnitHealth(arg1)
             local maxHp = UnitHealthMax(arg1)
             WFC.Combat:CheckHP(uName, hp, maxHp, arg1)
+        end
+    elseif event == "UNIT_DIED" then
+        if WFC.Tracker and arg1 then
+            local deadName = WFC.Tracker.guidToName[arg1] or UnitName(arg1)
+            if deadName then
+                if deadName == WFC.hordeCarrier then
+                    WFC.hordeCarrier = nil
+                    WFC.Frame:UpdateVisibility()
+                elseif deadName == WFC.allyCarrier then
+                    WFC.allyCarrier = nil
+                    WFC.Frame:UpdateVisibility()
+                end
+            end
         end
     end
 end)

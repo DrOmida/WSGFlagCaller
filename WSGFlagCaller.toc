@@ -1,11 +1,13 @@
 ## Interface: 11200
 ## Title: WSGFlagCaller
-## Notes: WSG flag carrier tracker and callouts
+## Notes: Warsong Gulch flag carrier tracker with HP callouts and distance
 ## Author: adimo [tel'abim]
-## Version: 1.0
+## Version: 2.0.0
+## OptionalDeps: Nampower, UnitXP
 ## SavedVariables: WSGFCConfig
 
 WSGFlagCaller_Core.lua
+WSGFlagCaller_Tracker.lua
 WSGFlagCaller_Frame.lua
 WSGFlagCaller_Combat.lua
 WSGFlagCaller_Commands.lua

@@ -55,7 +55,10 @@ function WFC.Frame:CreateRow(parent, yOffset, label)
     hpBar:SetStatusBarColor(0, 1, 0)
     hpBar:SetMinMaxValues(0, 100)
     hpBar:SetValue(100)
-    row.hpBar = hpBar
+    local distText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    distText:SetPoint("RIGHT", hpBar, "LEFT", -5, 0)
+    distText:SetText("--")
+    row.distText = distText
     
     row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row:SetScript("OnClick", function()
@@ -127,6 +130,8 @@ function WFC.Frame:UpdateVisibility()
         hud.allyRow.nameText:SetText("|cffaaaaaaNobody|r")
         hud.allyRow.hpBar:SetMinMaxValues(0, 100)
         hud.allyRow.hpBar:SetValue(0)
+        hud.allyRow.hpBar:SetStatusBarColor(0.5, 0.5, 0.5)
+        hud.allyRow.distText:SetText("--")
         hud.allyRow:Show()
     end
     
@@ -139,6 +144,8 @@ function WFC.Frame:UpdateVisibility()
         hud.hordeRow.nameText:SetText("|cffaaaaaaNobody|r")
         hud.hordeRow.hpBar:SetMinMaxValues(0, 100)
         hud.hordeRow.hpBar:SetValue(0)
+        hud.hordeRow.hpBar:SetStatusBarColor(0.5, 0.5, 0.5)
+        hud.hordeRow.distText:SetText("--")
         hud.hordeRow:Show()
     end
 end
@@ -177,61 +184,85 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
     local found = false
     local classColor = nil
     local targetId = nil
+    local guid = WFC.Tracker and WFC.Tracker:GetGUID(carrierName) or nil
 
-    if UnitName("target") == carrierName then
-        targetId = "target"
-    elseif UnitName("mouseover") == carrierName then
-        targetId = "mouseover"
-    end
-    
-    if not targetId then
-        local numRaid = GetNumRaidMembers()
-        if numRaid > 0 then
-            for i=1, numRaid do
-                if UnitName("raid"..i) == carrierName then
-                    targetId = "raid"..i
-                    break
-                elseif UnitName("raid"..i.."target") == carrierName then
-                    targetId = "raid"..i.."target"
-                    break
-                end
+    -- 1. Try resolving distance via Nampower/UnitXP if we have GUID
+    if guid and WFC.hasUnitXP then
+        local success, distance = pcall(function()
+            return UnitXP("distanceBetween", "player", guid)
+        end)
+        if success and distance then
+            if distance <= 20 then
+                row.distText:SetText(string.format("|cffff0000%d yd|r", distance))
+            elseif distance <= 40 then
+                row.distText:SetText(string.format("|cffffff00%d yd|r", distance))
+            else
+                row.distText:SetText(string.format("|cffffffff%d yd|r", distance))
             end
         else
-            for i=1, GetNumPartyMembers() do
-                if UnitName("party"..i) == carrierName then
-                    targetId = "party"..i
-                    break
-                elseif UnitName("party"..i.."target") == carrierName then
-                    targetId = "party"..i.."target"
-                    break
+            row.distText:SetText("--")
+        end
+    else
+        row.distText:SetText("--")
+    end
+
+    -- 2. Try getting absolute Health and MaxHealth securely via Nampower GUID
+    if guid and WFC.hasNampower and GetUnitField then
+        hp = GetUnitField(guid, "health")
+        hpMax = GetUnitField(guid, "maxHealth")
+        if hp and hpMax then
+            found = true
+            targetId = guid -- Nampower APIs support GUID tokens natively
+        end
+    end
+
+    -- 3. Fallback: Rapidly scan 40-man raid/party targets for the carrier (Vanilla standard)
+    if not found then
+        if UnitName("target") == carrierName then
+            targetId = "target"
+        elseif UnitName("mouseover") == carrierName then
+            targetId = "mouseover"
+        end
+        
+        if not targetId then
+            local numRaid = GetNumRaidMembers()
+            if numRaid > 0 then
+                for i=1, numRaid do
+                    if UnitName("raid"..i) == carrierName then
+                        targetId = "raid"..i
+                        break
+                    elseif UnitName("raid"..i.."target") == carrierName then
+                        targetId = "raid"..i.."target"
+                        break
+                    end
+                end
+            else
+                for i=1, GetNumPartyMembers() do
+                    if UnitName("party"..i) == carrierName then
+                        targetId = "party"..i
+                        break
+                    elseif UnitName("party"..i.."target") == carrierName then
+                        targetId = "party"..i.."target"
+                        break
+                    end
                 end
             end
         end
-    end
-    
-    if not targetId and WFC.superwow and UnitExists(carrierName) then
-        targetId = carrierName
+
+        if targetId then
+            hp = UnitHealth(targetId)
+            hpMax = UnitHealthMax(targetId)
+            found = true
+        end
     end
 
-    if targetId then
-        hp = UnitHealth(targetId)
-        hpMax = UnitHealthMax(targetId)
-        found = true
+    -- 4. Calculate aesthetics & dispatch bounds tracking
+    if targetId and found then
         if UnitClass then
             local _, eClass = UnitClass(targetId)
             if eClass then
                 classColor = WFC:GetClassColor(eClass)
             end
-        end
-    end
-    
-    -- SuperWoW Minimap Tracking 
-    if WSGFCConfig.minimap and WFC.superwow and TrackUnit then
-        local myFaction = UnitFactionGroup("player")
-        -- If I am Alliance, my ally carries the Horde flag (WFC.hordeCarrier)
-        local isAllyFC = (myFaction == "Alliance" and carrierName == WFC.hordeCarrier) or (myFaction == "Horde" and carrierName == WFC.allyCarrier)
-        if isAllyFC and targetId then
-            TrackUnit(targetId)
         end
     end
 
@@ -254,8 +285,9 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
         local myFaction = UnitFactionGroup("player")
         local isEnemyFC = (myFaction == "Alliance" and carrierName == WFC.allyCarrier) or (myFaction == "Horde" and carrierName == WFC.hordeCarrier)
         
-        if hp <= 0 or (UnitIsDead and UnitIsDead(targetId)) then
-            -- They died! Force clear out the state based on who they were.
+        if hp <= 0 then
+            -- Note: We REMOVED UnitIsDead(targetId) check here because UnitIsDead triggers heavily on Feign Death!
+            -- Nampower API correctly returns hp=0 for Feign. If it's a real death, Nampower's UNIT_DIED catches it separately.
             if carrierName == WFC.allyCarrier then
                 WFC.allyCarrier = nil
             end

@@ -2,7 +2,6 @@ WSGFCConfig = WSGFCConfig or {
     hpCallouts = true,
     hpThresholds = {75, 50, 25},
     showFrame = true,
-    minimap = true,
     debug = false,
     frameX = 0,
     framePoint = "TOP",
@@ -24,7 +23,8 @@ WFC = {
         ["WARLOCK"] = "9482C9",
         ["DRUID"] = "FF7D0A"
     },
-    superwow = (SUPERWOW_VERSION ~= nil)
+    hasNampower = (GetNampowerVersion ~= nil),
+    hasUnitXP = (UnitXP ~= nil)
 }
 
 local frame = CreateFrame("Frame")
@@ -69,6 +69,7 @@ function WFC:CheckZone(force)
             frame:RegisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
             if WFC.Combat and WFC.Combat.Enable then WFC.Combat:Enable() end
             if WFC.Frame and WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
+            if WFC.Tracker and WFC.Tracker.Enable then WFC.Tracker:Enable() end
             WFC:Debug("Entered WSG. Events enabled.")
         end
     else
@@ -79,6 +80,7 @@ function WFC:CheckZone(force)
             frame:UnregisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
             if WFC.Combat and WFC.Combat.Disable then WFC.Combat:Disable() end
             if WFC.Frame and WFC.Frame.Disable then WFC.Frame:Disable() end
+            if WFC.Tracker and WFC.Tracker.Disable then WFC.Tracker:Disable() end
             WFC.allyCarrier = nil
             WFC.hordeCarrier = nil
             WFC:Debug("Left WSG. Events disabled.")
@@ -91,16 +93,22 @@ frame:SetScript("OnEvent", function()
         if WSGFCConfig.hpCallouts == nil then WSGFCConfig.hpCallouts = true end
         if not WSGFCConfig.hpThresholds then WSGFCConfig.hpThresholds = {75, 50, 25} end
         if WSGFCConfig.showFrame == nil then WSGFCConfig.showFrame = true end
-        if WSGFCConfig.minimap == nil then WSGFCConfig.minimap = true end
         if not WSGFCConfig.framePoint then WSGFCConfig.framePoint = "TOP" end
         if not WSGFCConfig.frameX then WSGFCConfig.frameX = 0 end
         if not WSGFCConfig.frameY then WSGFCConfig.frameY = -150 end
         if WSGFCConfig.locked == nil then WSGFCConfig.locked = false end
 
+        -- Set CVars needed for fast detection if Nampower is running
+        if WFC.hasNampower and SetCVar and GetCVar("NP_EnableSpellStartEvents") ~= "1" then
+            SetCVar("NP_EnableSpellStartEvents", "1")
+        end
+
         if WFC.Frame.Initialize then
             WFC.Frame:Initialize()
         end
-        WFC:Print("Loaded. Type /wfc info for commands.")
+        local npStr = WFC.hasNampower and "|cff00ff00Yes|r" or "|cffff0000No|r"
+        local unitXPStr = WFC.hasUnitXP and "|cff00ff00Yes|r" or "|cffff0000No|r"
+        WFC:Print("Loaded. Nampower: " .. npStr .. " UnitXP: " .. unitXPStr .. " (Type /wfc info)")
         WFC:CheckZone()
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
         WFC:CheckZone()
