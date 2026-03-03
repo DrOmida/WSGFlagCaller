@@ -1,0 +1,11 @@
+## Interface: 11200
+## Title: WSGFlagCaller
+## Notes: WSG flag carrier tracker and callouts
+## Author: adimo [tel'abim]
+## Version: 1.0
+## SavedVariables: WSGFCConfig
+
+WSGFlagCaller_Core.lua
+WSGFlagCaller_Frame.lua
+WSGFlagCaller_Combat.lua
+WSGFlagCaller_Commands.lua

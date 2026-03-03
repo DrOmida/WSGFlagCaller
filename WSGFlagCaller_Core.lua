@@ -1,0 +1,190 @@
+WSGFCConfig = WSGFCConfig or {
+    flagPickup = true,
+    flagDrop = true,
+    flagCapture = true,
+    flagReturn = true,
+    hpCallouts = true,
+    hpThresholds = {75, 50, 25},
+    showFrame = true,
+    minimap = true,
+    debug = false,
+    frameX = 0,
+    frameY = -150,
+    framePoint = "TOP"
+}
+
+WFC = {
+    allyCarrier = nil,
+    hordeCarrier = nil,
+    inWSG = false,
+    colors = {
+        ["WARRIOR"] = "C79C6E",
+        ["PALADIN"] = "F58CBA",
+        ["HUNTER"] = "ABD473",
+        ["ROGUE"] = "FFF569",
+        ["PRIEST"] = "FFFFFF",
+        ["SHAMAN"] = "0070DE",
+        ["MAGE"] = "69CCF0",
+        ["WARLOCK"] = "9482C9",
+        ["DRUID"] = "FF7D0A"
+    },
+    superwow = (SUPERWOW_VERSION ~= nil)
+}
+
+local frame = CreateFrame("Frame")
+frame:RegisterEvent("ADDON_LOADED")
+frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
+function WFC:GetClassColor(classNameToken)
+    if classNameToken and WFC.colors[string.upper(classNameToken)] then
+        return WFC.colors[string.upper(classNameToken)]
+    end
+    return "FFFFFF"
+end
+
+function WFC:Debug(msg)
+    if WSGFCConfig.debug then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff00ccff[WFC Debug]|r " .. tostring(msg))
+    end
+end
+
+function WFC:Print(msg)
+    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[WSGFlagCaller]|r " .. tostring(msg))
+end
+
+function WFC:Announce(msg)
+    SendChatMessage(msg, "BATTLEGROUND")
+end
+
+local function OnZoneChange()
+    local zone = GetZoneText()
+    if zone == "Warsong Gulch" then
+        if not WFC.inWSG then
+            WFC.inWSG = true
+            frame:RegisterEvent("CHAT_MSG_BG_SYSTEM_ALLIANCE")
+            frame:RegisterEvent("CHAT_MSG_BG_SYSTEM_HORDE")
+            frame:RegisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
+            WFC.Combat:Enable()
+            WFC.Frame:UpdateVisibility()
+            WFC:Debug("Entered WSG. Events enabled.")
+        end
+    else
+        if WFC.inWSG then
+            WFC.inWSG = false
+            frame:UnregisterEvent("CHAT_MSG_BG_SYSTEM_ALLIANCE")
+            frame:UnregisterEvent("CHAT_MSG_BG_SYSTEM_HORDE")
+            frame:UnregisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
+            WFC.Combat:Disable()
+            WFC.Frame:Disable()
+            WFC.allyCarrier = nil
+            WFC.hordeCarrier = nil
+            WFC:Debug("Left WSG. Events disabled.")
+        end
+    end
+end
+
+frame:SetScript("OnEvent", function()
+    if event == "ADDON_LOADED" and arg1 == "WSGFlagCaller" then
+        if WSGFCConfig.flagPickup == nil then WSGFCConfig.flagPickup = true end
+        if WSGFCConfig.flagDrop == nil then WSGFCConfig.flagDrop = true end
+        if WSGFCConfig.flagCapture == nil then WSGFCConfig.flagCapture = true end
+        if WSGFCConfig.flagReturn == nil then WSGFCConfig.flagReturn = true end
+        if WSGFCConfig.hpCallouts == nil then WSGFCConfig.hpCallouts = true end
+        if not WSGFCConfig.hpThresholds then WSGFCConfig.hpThresholds = {75, 50, 25} end
+        if WSGFCConfig.showFrame == nil then WSGFCConfig.showFrame = true end
+        if WSGFCConfig.minimap == nil then WSGFCConfig.minimap = true end
+        if not WSGFCConfig.framePoint then WSGFCConfig.framePoint = "TOP" end
+        if not WSGFCConfig.frameX then WSGFCConfig.frameX = 0 end
+        if not WSGFCConfig.frameY then WSGFCConfig.frameY = -150 end
+
+        WFC.Frame:Initialize()
+        WFC:Print("Loaded. Type /wfc info for commands.")
+    elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
+        OnZoneChange()
+    elseif event == "CHAT_MSG_BG_SYSTEM_ALLIANCE" or event == "CHAT_MSG_BG_SYSTEM_HORDE" or event == "CHAT_MSG_BG_SYSTEM_NEUTRAL" then
+        WFC:ProcessBGMessage(arg1)
+    end
+end)
+
+function WFC:ProcessBGMessage(msg)
+    WFC:Debug("BG Msg: " .. tostring(msg))
+    
+    local _, _, pickerAlliance = string.find(msg, "([^%s]+) has taken the Alliance Flag!")
+    if pickerAlliance then
+        WFC.allyCarrier = pickerAlliance
+        if WSGFCConfig.flagPickup then
+            WFC:Announce(pickerAlliance .. " has taken the Alliance Flag!")
+        end
+        WFC.Combat:ResetPhases(pickerAlliance)
+        WFC.Frame:UpdateVisibility()
+        return
+    end
+
+    local _, _, pickerHorde = string.find(msg, "([^%s]+) has taken the Horde Flag!")
+    if pickerHorde then
+        WFC.hordeCarrier = pickerHorde
+        if WSGFCConfig.flagPickup then
+            WFC:Announce(pickerHorde .. " has taken the Horde Flag!")
+        end
+        WFC.Combat:ResetPhases(pickerHorde)
+        WFC.Frame:UpdateVisibility()
+        return
+    end
+
+    if string.find(msg, "The Alliance Flag was dropped") then
+        WFC.allyCarrier = nil
+        if WSGFCConfig.flagDrop then
+            WFC:Announce("The Alliance Flag was dropped!")
+        end
+        WFC.Frame:UpdateVisibility()
+        return
+    end
+
+    if string.find(msg, "The Horde Flag was dropped") then
+        WFC.hordeCarrier = nil
+        if WSGFCConfig.flagDrop then
+            WFC:Announce("The Horde Flag was dropped!")
+        end
+        WFC.Frame:UpdateVisibility()
+        return
+    end
+
+    local _, _, capAlliance = string.find(msg, "([^%s]+) captured the Alliance Flag!")
+    if capAlliance then
+        WFC.allyCarrier = nil
+        if WSGFCConfig.flagCapture then
+            WFC:Announce(capAlliance .. " captured the Alliance Flag!")
+        end
+        WFC.Frame:UpdateVisibility()
+        return
+    end
+
+    local _, _, capHorde = string.find(msg, "([^%s]+) captured the Horde Flag!")
+    if capHorde then
+        WFC.hordeCarrier = nil
+        if WSGFCConfig.flagCapture then
+            WFC:Announce(capHorde .. " captured the Horde Flag!")
+        end
+        WFC.Frame:UpdateVisibility()
+        return
+    end
+
+    if string.find(msg, "The Alliance Flag was returned") then
+        WFC.allyCarrier = nil
+        if WSGFCConfig.flagReturn then
+            WFC:Announce("The Alliance Flag was returned to its base.")
+        end
+        WFC.Frame:UpdateVisibility()
+        return
+    end
+
+    if string.find(msg, "The Horde Flag was returned") then
+        WFC.hordeCarrier = nil
+        if WSGFCConfig.flagReturn then
+            WFC:Announce("The Horde Flag was returned to its base.")
+        end
+        WFC.Frame:UpdateVisibility()
+        return
+    end
+end
