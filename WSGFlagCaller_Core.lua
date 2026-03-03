@@ -136,41 +136,15 @@ function WFC:ProcessBGMessage(msg)
         return
     end
 
-    if string.find(msg, "The Alliance Flag was dropped") then
-        WFC.allyCarrier = nil
+    msg = string.lower(msg)
+    
+    if string.find(msg, "was dropped") or string.find(msg, "captured the") or string.find(msg, "was returned") then
+        if string.find(msg, "alliance") then
+            WFC.allyCarrier = nil
+        end
+        if string.find(msg, "horde") then
+            WFC.hordeCarrier = nil
+        end
         WFC.Frame:UpdateVisibility()
-        return
-    end
-
-    if string.find(msg, "The Horde Flag was dropped") then
-        WFC.hordeCarrier = nil
-        WFC.Frame:UpdateVisibility()
-        return
-    end
-
-    local _, _, capAlliance = string.find(msg, "([^%s]+) captured the Alliance Flag!")
-    if capAlliance then
-        WFC.allyCarrier = nil
-        WFC.Frame:UpdateVisibility()
-        return
-    end
-
-    local _, _, capHorde = string.find(msg, "([^%s]+) captured the Horde Flag!")
-    if capHorde then
-        WFC.hordeCarrier = nil
-        WFC.Frame:UpdateVisibility()
-        return
-    end
-
-    if string.find(msg, "The Alliance Flag was returned") then
-        WFC.allyCarrier = nil
-        WFC.Frame:UpdateVisibility()
-        return
-    end
-
-    if string.find(msg, "The Horde Flag was returned") then
-        WFC.hordeCarrier = nil
-        WFC.Frame:UpdateVisibility()
-        return
     end
 end
