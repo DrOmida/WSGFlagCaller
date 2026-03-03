@@ -112,7 +112,11 @@ end)
 function WFC:ProcessBGMessage(msg)
     WFC:Debug("BG Msg: " .. tostring(msg))
     
-    local _, _, pickerAlliance = string.find(msg, "([^%s]+) has taken the Alliance Flag!")
+    local pickerAlliance = nil
+    local _, _, p1 = string.find(msg, "([^%s]+) has taken the Alliance [Ff]lag")
+    local _, _, p2 = string.find(msg, "The Alliance [Ff]lag was picked up by ([^%s!]+)")
+    pickerAlliance = p1 or p2
+
     if pickerAlliance then
         WFC.allyCarrier = pickerAlliance
         WFC.Combat:ResetPhases(pickerAlliance)
@@ -120,7 +124,11 @@ function WFC:ProcessBGMessage(msg)
         return
     end
 
-    local _, _, pickerHorde = string.find(msg, "([^%s]+) has taken the Horde Flag!")
+    local pickerHorde = nil
+    local _, _, h1 = string.find(msg, "([^%s]+) has taken the Horde [Ff]lag")
+    local _, _, h2 = string.find(msg, "The Horde [Ff]lag was picked up by ([^%s!]+)")
+    pickerHorde = h1 or h2
+
     if pickerHorde then
         WFC.hordeCarrier = pickerHorde
         WFC.Combat:ResetPhases(pickerHorde)
