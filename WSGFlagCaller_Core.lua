@@ -32,7 +32,7 @@ WFC = {
 }
 
 local frame = CreateFrame("Frame")
-frame:RegisterEvent("ADDON_LOADED")
+frame:RegisterEvent("VARIABLES_LOADED")
 frame:RegisterEvent("ZONE_CHANGED_NEW_AREA")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
 
@@ -57,16 +57,22 @@ function WFC:Announce(msg)
     SendChatMessage(msg, "BATTLEGROUND")
 end
 
-local function OnZoneChange()
+function WFC:CheckZone(force)
     local zone = GetZoneText()
-    if zone == "Warsong Gulch" then
+    local realZone = GetRealZoneText and GetRealZoneText() or ""
+    
+    local isWSG = force or (zone == "Warsong Gulch") or (realZone == "Warsong Gulch") or (string.find(string.lower(zone), "warsong")) or (string.find(string.lower(realZone), "warsong"))
+
+    WFC:Debug("Zone check: zone=" .. tostring(zone) .. " realZone=" .. tostring(realZone) .. " inWSG=" .. tostring(isWSG))
+
+    if isWSG then
         if not WFC.inWSG then
             WFC.inWSG = true
             frame:RegisterEvent("CHAT_MSG_BG_SYSTEM_ALLIANCE")
             frame:RegisterEvent("CHAT_MSG_BG_SYSTEM_HORDE")
             frame:RegisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
-            WFC.Combat:Enable()
-            WFC.Frame:UpdateVisibility()
+            if WFC.Combat and WFC.Combat.Enable then WFC.Combat:Enable() end
+            if WFC.Frame and WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
             WFC:Debug("Entered WSG. Events enabled.")
         end
     else
@@ -75,8 +81,8 @@ local function OnZoneChange()
             frame:UnregisterEvent("CHAT_MSG_BG_SYSTEM_ALLIANCE")
             frame:UnregisterEvent("CHAT_MSG_BG_SYSTEM_HORDE")
             frame:UnregisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
-            WFC.Combat:Disable()
-            WFC.Frame:Disable()
+            if WFC.Combat and WFC.Combat.Disable then WFC.Combat:Disable() end
+            if WFC.Frame and WFC.Frame.Disable then WFC.Frame:Disable() end
             WFC.allyCarrier = nil
             WFC.hordeCarrier = nil
             WFC:Debug("Left WSG. Events disabled.")
@@ -85,7 +91,7 @@ local function OnZoneChange()
 end
 
 frame:SetScript("OnEvent", function()
-    if event == "ADDON_LOADED" and arg1 == "WSGFlagCaller" then
+    if event == "VARIABLES_LOADED" then
         if WSGFCConfig.flagPickup == nil then WSGFCConfig.flagPickup = true end
         if WSGFCConfig.flagDrop == nil then WSGFCConfig.flagDrop = true end
         if WSGFCConfig.flagCapture == nil then WSGFCConfig.flagCapture = true end
@@ -98,10 +104,13 @@ frame:SetScript("OnEvent", function()
         if not WSGFCConfig.frameX then WSGFCConfig.frameX = 0 end
         if not WSGFCConfig.frameY then WSGFCConfig.frameY = -150 end
 
-        WFC.Frame:Initialize()
+        if WFC.Frame.Initialize then
+            WFC.Frame:Initialize()
+        end
         WFC:Print("Loaded. Type /wfc info for commands.")
+        WFC:CheckZone()
     elseif event == "ZONE_CHANGED_NEW_AREA" or event == "PLAYER_ENTERING_WORLD" then
-        OnZoneChange()
+        WFC:CheckZone()
     elseif event == "CHAT_MSG_BG_SYSTEM_ALLIANCE" or event == "CHAT_MSG_BG_SYSTEM_HORDE" or event == "CHAT_MSG_BG_SYSTEM_NEUTRAL" then
         WFC:ProcessBGMessage(arg1)
     end

@@ -20,6 +20,7 @@ SlashCmdList["WSGFLAGCALLER"] = function(msg)
         WFC:Print("/wfc frame on|off")
         WFC:Print("/wfc minimap on|off")
         WFC:Print("/wfc debug on|off")
+        WFC:Print("/wfc force")
         WFC:Print("/wfc reset")
         WFC:Print("/wfc status")
     elseif cmd == "flag" then
@@ -43,6 +44,9 @@ SlashCmdList["WSGFLAGCALLER"] = function(msg)
     elseif cmd == "debug" then
         WSGFCConfig.debug = (args[2] == "on")
         WFC:Print("Debug mode set to " .. tostring(args[2]))
+    elseif cmd == "force" then
+        WFC:CheckZone(true)
+        WFC:Print("Force-enabled WSG mode.")
     elseif cmd == "reset" then
         WSGFCConfig.framePoint = "TOP"
         WSGFCConfig.frameX = 0
