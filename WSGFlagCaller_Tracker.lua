@@ -26,7 +26,15 @@ end
 
 function WFC.Tracker:GetGUID(name)
     if not name then return nil end
-    return WFC.Tracker.nameToGuid[name]
+    local guid = WFC.Tracker.nameToGuid[name]
+    if not guid and SpySW and SpySW.nameToGuid then
+        guid = SpySW.nameToGuid[name]
+        if guid then WFC.Tracker:ProcessGUID(guid) end
+    elseif not guid and SpyNP and SpyNP.nameToGuid then
+        guid = SpyNP.nameToGuid[name]
+        if guid then WFC.Tracker:ProcessGUID(guid) end
+    end
+    return guid
 end
 
 function WFC.Tracker:ProcessGUID(guid)

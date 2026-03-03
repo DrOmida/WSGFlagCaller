@@ -56,8 +56,8 @@ SlashCmdList["WSGFLAGCALLER"] = function(msg)
     elseif cmd == "status" then
         local onOffStr = function(b) return b and "|cff00ff00[ON]|r" or "|cffff0000[OFF]|r" end
         WFC:Print("=== WSG Flag Caller Status ===")
-        local npStr = WFC.hasNampower and "|cff00ff00Yes|r" or "|cffff0000No|r"
-        local unitXPStr = WFC.hasUnitXP and "|cff00ff00Yes|r" or "|cffff0000No|r"
+        local npStr = GetNampowerVersion and "|cff00ff00Yes|r" or "|cffff0000No|r"
+        local unitXPStr = UnitXP and "|cff00ff00Yes|r" or "|cffff0000No|r"
         WFC:Print("Nampower (Guids/HP): " .. npStr)
         WFC:Print("UnitXP (Distance): " .. unitXPStr)
         WFC:Print("HP Callouts: " .. onOffStr(WSGFCConfig.hpCallouts) .. " (Thresholds: " .. table.concat(WSGFCConfig.hpThresholds, ",") .. "%)")

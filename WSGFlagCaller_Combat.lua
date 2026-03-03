@@ -79,7 +79,7 @@ function WFC.Combat:CheckHP(carrierName, hp, maxHp, unitId)
 
         local currentlyLocked = WFC.Combat.phases[carrierName][t]
         if not currentlyLocked and pct <= t then
-            if (now - WFC.Combat.lastCalloutTime) > 1 then
+            if (now - WFC.Combat.lastCalloutTime) > 2 then
                 WFC.Combat.phases[carrierName][t] = true
                 WFC.Combat.lastCalloutTime = now
                 

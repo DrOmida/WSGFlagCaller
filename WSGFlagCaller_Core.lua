@@ -98,6 +98,10 @@ frame:SetScript("OnEvent", function()
         if not WSGFCConfig.frameY then WSGFCConfig.frameY = -150 end
         if WSGFCConfig.locked == nil then WSGFCConfig.locked = false end
 
+        -- Re-evaluate capability mod presence after all addons have loaded
+        WFC.hasNampower = (GetNampowerVersion ~= nil)
+        WFC.hasUnitXP = (UnitXP ~= nil)
+
         -- Set CVars needed for fast detection if Nampower is running
         if WFC.hasNampower and SetCVar and GetCVar("NP_EnableSpellStartEvents") ~= "1" then
             SetCVar("NP_EnableSpellStartEvents", "1")

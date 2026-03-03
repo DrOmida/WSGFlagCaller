@@ -179,7 +179,7 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
     local guid = WFC.Tracker and WFC.Tracker:GetGUID(carrierName) or nil
 
     -- 1. Try resolving distance via Nampower/UnitXP if we have GUID
-    if guid and WFC.hasUnitXP then
+    if guid and UnitXP then
         local success, distance = pcall(function()
             return UnitXP("distanceBetween", "player", guid)
         end)
@@ -199,7 +199,7 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
     end
 
     -- 2. Try getting absolute Health and MaxHealth securely via Nampower GUID
-    if guid and WFC.hasNampower and GetUnitField then
+    if guid and GetUnitField then
         hp = GetUnitField(guid, "health")
         hpMax = GetUnitField(guid, "maxHealth")
         if hp and hpMax then
@@ -245,6 +245,15 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
             hp = UnitHealth(targetId)
             hpMax = UnitHealthMax(targetId)
             found = true
+            
+            -- If we naturally found them as a token, explicitly feed their GUID to our Tracker
+            -- so that the distance calculation Engine starts working for them!
+            if GetUnitGUID then
+                local foundGuid = GetUnitGUID(targetId)
+                if foundGuid and WFC.Tracker and WFC.Tracker.ProcessGUID then
+                    WFC.Tracker:ProcessGUID(foundGuid)
+                end
+            end
         end
     end
 
