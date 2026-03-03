@@ -14,8 +14,8 @@ function WFC.Frame:Initialize()
     unlockBg:SetTexture(0, 1, 0, 0.3)
     hud.unlockBg = unlockBg
     
-    hud.allyRow = WFC.Frame:CreateRow(hud, 0, "Alliance Flag")
-    hud.hordeRow = WFC.Frame:CreateRow(hud, -30, "Horde Flag")
+    hud.hordeRow = WFC.Frame:CreateRow(hud, 0, "Horde Flag")
+    hud.allyRow = WFC.Frame:CreateRow(hud, -30, "Alliance Flag")
     
     WFC.Frame:UpdateLockState()
     hud:Hide()
@@ -32,18 +32,8 @@ function WFC.Frame:CreateRow(parent, yOffset, label)
     tex:SetTexture(0, 0, 0, 0.5)
     row.bg = tex
     
-    local icon = row:CreateTexture(nil, "ARTWORK")
-    icon:SetWidth(20)
-    icon:SetHeight(20)
-    icon:SetPoint("LEFT", row, "LEFT", 2, 0)
-    if string.find(label, "Alliance") then
-        icon:SetTexture("Interface\\Icons\\INV_Banner_02") 
-    else
-        icon:SetTexture("Interface\\Icons\\INV_Banner_03")
-    end
-    
     local nameText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
-    nameText:SetPoint("LEFT", icon, "RIGHT", 5, 0)
+    nameText:SetPoint("LEFT", row, "LEFT", 5, 0)
     nameText:SetText("Carrier")
     row.nameText = nameText
     
