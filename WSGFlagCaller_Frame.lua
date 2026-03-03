@@ -208,6 +208,10 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
             end
         end
     end
+    
+    if not targetId and WFC.superwow and UnitExists(carrierName) then
+        targetId = carrierName
+    end
 
     if targetId then
         hp = UnitHealth(targetId)
