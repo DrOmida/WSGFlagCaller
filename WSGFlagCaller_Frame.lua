@@ -84,32 +84,31 @@ function WFC.Frame:UpdateVisibility()
         return
     end
     
-    local showAny = false
+    hud:Show()
+    WFC.Frame:StartTicker()
     
     if WFC.allyCarrier then
         hud.allyRow.carrierName = WFC.allyCarrier
         hud.allyRow.nameText:SetText(WFC.allyCarrier)
         hud.allyRow:Show()
-        showAny = true
     else
-        hud.allyRow:Hide()
+        hud.allyRow.carrierName = nil
+        hud.allyRow.nameText:SetText("|cffaaaaaaNobody|r")
+        hud.allyRow.hpBar:SetMinMaxValues(0, 100)
+        hud.allyRow.hpBar:SetValue(0)
+        hud.allyRow:Show()
     end
     
     if WFC.hordeCarrier then
         hud.hordeRow.carrierName = WFC.hordeCarrier
         hud.hordeRow.nameText:SetText(WFC.hordeCarrier)
         hud.hordeRow:Show()
-        showAny = true
     else
-        hud.hordeRow:Hide()
-    end
-    
-    if showAny then
-        hud:Show()
-        WFC.Frame:StartTicker()
-    else
-        hud:Hide()
-        WFC.Frame:StopTicker()
+        hud.hordeRow.carrierName = nil
+        hud.hordeRow.nameText:SetText("|cffaaaaaaNobody|r")
+        hud.hordeRow.hpBar:SetMinMaxValues(0, 100)
+        hud.hordeRow.hpBar:SetValue(0)
+        hud.hordeRow:Show()
     end
 end
 
