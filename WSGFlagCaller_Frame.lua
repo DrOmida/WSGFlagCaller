@@ -7,20 +7,17 @@ function WFC.Frame:Initialize()
     hud:SetHeight(60)
     hud:SetPoint(WSGFCConfig.framePoint, UIParent, WSGFCConfig.framePoint, WSGFCConfig.frameX, WSGFCConfig.frameY)
     hud:SetMovable(true)
-    hud:EnableMouse(true)
-    hud:RegisterForDrag("LeftButton")
-    hud:SetScript("OnDragStart", function() this:StartMoving() end)
-    hud:SetScript("OnDragStop", function() 
-        this:StopMovingOrSizing() 
-        local p, _, rp, x, y = this:GetPoint()
-        WSGFCConfig.framePoint = p
-        WSGFCConfig.frameX = x
-        WSGFCConfig.frameY = y
-    end)
+    hud:SetMovable(true)
+    
+    local unlockBg = hud:CreateTexture(nil, "BACKGROUND")
+    unlockBg:SetAllPoints()
+    unlockBg:SetTexture(0, 1, 0, 0.3)
+    hud.unlockBg = unlockBg
     
     hud.allyRow = WFC.Frame:CreateRow(hud, 0, "Alliance Flag")
     hud.hordeRow = WFC.Frame:CreateRow(hud, -30, "Horde Flag")
     
+    WFC.Frame:UpdateLockState()
     hud:Hide()
 end
 
@@ -60,7 +57,18 @@ function WFC.Frame:CreateRow(parent, yOffset, label)
     hpBar:SetValue(100)
     row.hpBar = hpBar
     
+    row:RegisterForClicks("LeftButtonUp", "RightButtonUp")
     row:SetScript("OnClick", function()
+        if arg1 == "RightButton" then
+            WSGFCConfig.locked = not WSGFCConfig.locked
+            if WSGFCConfig.locked then
+                WFC:Print("HUD Locked.")
+            else
+                WFC:Print("HUD Unlocked. You can now drag the HUD.")
+            end
+            WFC.Frame:UpdateLockState()
+            return
+        end
         local cName = row.carrierName
         if cName then
             TargetByName(cName, true)
@@ -70,7 +78,30 @@ function WFC.Frame:CreateRow(parent, yOffset, label)
         end
     end)
     
+    row:RegisterForDrag("LeftButton")
+    row:SetScript("OnDragStart", function() 
+        if not WSGFCConfig.locked then 
+            parent:StartMoving() 
+        end 
+    end)
+    row:SetScript("OnDragStop", function() 
+        parent:StopMovingOrSizing() 
+        local p, _, rp, x, y = parent:GetPoint()
+        WSGFCConfig.framePoint = p
+        WSGFCConfig.frameX = x
+        WSGFCConfig.frameY = y
+    end)
+    
     return row
+end
+
+function WFC.Frame:UpdateLockState()
+    if not hud then return end
+    if WSGFCConfig.locked then
+        hud.unlockBg:Hide()
+    else
+        hud.unlockBg:Show()
+    end
 end
 
 function WFC.Frame:Disable()

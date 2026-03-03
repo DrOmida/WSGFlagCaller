@@ -5,8 +5,8 @@ WSGFCConfig = WSGFCConfig or {
     minimap = true,
     debug = false,
     frameX = 0,
-    frameY = -150,
-    framePoint = "TOP"
+    framePoint = "TOP",
+    locked = false
 }
 
 WFC = {
@@ -95,6 +95,7 @@ frame:SetScript("OnEvent", function()
         if not WSGFCConfig.framePoint then WSGFCConfig.framePoint = "TOP" end
         if not WSGFCConfig.frameX then WSGFCConfig.frameX = 0 end
         if not WSGFCConfig.frameY then WSGFCConfig.frameY = -150 end
+        if WSGFCConfig.locked == nil then WSGFCConfig.locked = false end
 
         if WFC.Frame.Initialize then
             WFC.Frame:Initialize()
