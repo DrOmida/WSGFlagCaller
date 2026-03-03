@@ -207,5 +207,8 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
         else
             row.hpBar:SetStatusBarColor(1, 0, 0)
         end
+        if WFC.Combat and WFC.Combat.CheckHP then
+            WFC.Combat:CheckHP(carrierName, hp, hpMax, targetId)
+        end
     end
 end

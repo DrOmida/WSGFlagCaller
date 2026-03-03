@@ -143,18 +143,12 @@ function WFC:ProcessBGMessage(msg)
 
     if string.find(msg, "The Alliance Flag was dropped") then
         WFC.allyCarrier = nil
-        if WSGFCConfig.flagDrop then
-            WFC:Announce("The Alliance Flag was dropped!")
-        end
         WFC.Frame:UpdateVisibility()
         return
     end
 
     if string.find(msg, "The Horde Flag was dropped") then
         WFC.hordeCarrier = nil
-        if WSGFCConfig.flagDrop then
-            WFC:Announce("The Horde Flag was dropped!")
-        end
         WFC.Frame:UpdateVisibility()
         return
     end
@@ -162,9 +156,6 @@ function WFC:ProcessBGMessage(msg)
     local _, _, capAlliance = string.find(msg, "([^%s]+) captured the Alliance Flag!")
     if capAlliance then
         WFC.allyCarrier = nil
-        if WSGFCConfig.flagCapture then
-            WFC:Announce(capAlliance .. " captured the Alliance Flag!")
-        end
         WFC.Frame:UpdateVisibility()
         return
     end
@@ -172,27 +163,18 @@ function WFC:ProcessBGMessage(msg)
     local _, _, capHorde = string.find(msg, "([^%s]+) captured the Horde Flag!")
     if capHorde then
         WFC.hordeCarrier = nil
-        if WSGFCConfig.flagCapture then
-            WFC:Announce(capHorde .. " captured the Horde Flag!")
-        end
         WFC.Frame:UpdateVisibility()
         return
     end
 
     if string.find(msg, "The Alliance Flag was returned") then
         WFC.allyCarrier = nil
-        if WSGFCConfig.flagReturn then
-            WFC:Announce("The Alliance Flag was returned to its base.")
-        end
         WFC.Frame:UpdateVisibility()
         return
     end
 
     if string.find(msg, "The Horde Flag was returned") then
         WFC.hordeCarrier = nil
-        if WSGFCConfig.flagReturn then
-            WFC:Announce("The Horde Flag was returned to its base.")
-        end
         WFC.Frame:UpdateVisibility()
         return
     end
