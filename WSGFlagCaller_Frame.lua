@@ -180,25 +180,33 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
 
     if UnitName("target") == carrierName then
         targetId = "target"
+    elseif UnitName("mouseover") == carrierName then
+        targetId = "mouseover"
     end
+    
     if not targetId then
-        for i=1, GetNumGroupMembers and GetNumGroupMembers() or GetNumRaidMembers() do
-            if UnitName("raid"..i) == carrierName then
-                targetId = "raid"..i
-                break
+        local numRaid = GetNumRaidMembers()
+        if numRaid > 0 then
+            for i=1, numRaid do
+                if UnitName("raid"..i) == carrierName then
+                    targetId = "raid"..i
+                    break
+                elseif UnitName("raid"..i.."target") == carrierName then
+                    targetId = "raid"..i.."target"
+                    break
+                end
+            end
+        else
+            for i=1, GetNumPartyMembers() do
+                if UnitName("party"..i) == carrierName then
+                    targetId = "party"..i
+                    break
+                elseif UnitName("party"..i.."target") == carrierName then
+                    targetId = "party"..i.."target"
+                    break
+                end
             end
         end
-    end
-    if not targetId then
-        for i=1, GetNumPartyMembers() do
-            if UnitName("party"..i) == carrierName then
-                targetId = "party"..i
-                break
-            end
-        end
-    end
-    if not targetId and WFC.superwow and UnitExists(carrierName) then
-        targetId = carrierName
     end
 
     if targetId then
