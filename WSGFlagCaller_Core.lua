@@ -1,17 +1,27 @@
 WSGFCConfig = WSGFCConfig or {
+    wsgEnabled = true,
     hpCallouts = true,
     hpThresholds = {75, 50, 25},
     showFrame = true,
+    arenaEnabled = true,
+    arenaDistance = true,
+    arenaTrinkets = true,
+    minimapPos = 45,
     debug = false,
     frameX = 0,
     framePoint = "TOP",
-    locked = false
+    locked = false,
+    arenaFrameX = 0,
+    arenaFrameY = 0,
+    arenaFramePoint = "CENTER",
+    arenaLocked = false
 }
 
 WFC = {
     allyCarrier = nil,
     hordeCarrier = nil,
     inWSG = false,
+    inArena = false,
     colors = {
         ["WARRIOR"] = "C79C6E",
         ["PALADIN"] = "F58CBA",
@@ -58,10 +68,23 @@ function WFC:CheckZone(force)
     local realZone = GetRealZoneText and GetRealZoneText() or ""
     
     local isWSG = force or (zone == "Warsong Gulch") or (realZone == "Warsong Gulch") or (string.find(string.lower(zone), "warsong")) or (string.find(string.lower(realZone), "warsong"))
+    local isArena = false
+    
+    local arenaZones = {
+        ["The Blood Arena"] = true,
+        ["Lordaeron Arena"] = true,
+        ["Sunstrider Court"] = true,
+        ["Blood Ring"] = true,
+        ["The Blood Ring"] = true
+    }
+    
+    if arenaZones[zone] or arenaZones[realZone] then
+        isArena = true
+    end
 
-    WFC:Debug("Zone check: zone=" .. tostring(zone) .. " realZone=" .. tostring(realZone) .. " inWSG=" .. tostring(isWSG))
+    WFC:Debug("Zone check: zone=" .. tostring(zone) .. " inWSG=" .. tostring(isWSG) .. " inArena=" .. tostring(isArena))
 
-    if isWSG then
+    if isWSG and WSGFCConfig.wsgEnabled then
         if not WFC.inWSG then
             WFC.inWSG = true
             frame:RegisterEvent("CHAT_MSG_BG_SYSTEM_ALLIANCE")
@@ -80,10 +103,31 @@ function WFC:CheckZone(force)
             frame:UnregisterEvent("CHAT_MSG_BG_SYSTEM_NEUTRAL")
             if WFC.Combat and WFC.Combat.Disable then WFC.Combat:Disable() end
             if WFC.Frame and WFC.Frame.Disable then WFC.Frame:Disable() end
-            if WFC.Tracker and WFC.Tracker.Disable then WFC.Tracker:Disable() end
+            -- Make sure we don't disable tracker if Arena is using it!
+            if not WFC.inArena then
+                if WFC.Tracker and WFC.Tracker.Disable then WFC.Tracker:Disable() end
+            end
             WFC.allyCarrier = nil
             WFC.hordeCarrier = nil
             WFC:Debug("Left WSG. Events disabled.")
+        end
+    end
+    
+    if isArena and WSGFCConfig.arenaEnabled then
+        if not WFC.inArena then
+            WFC.inArena = true
+            if WFC.Tracker and WFC.Tracker.Enable then WFC.Tracker:Enable() end
+            if WFC.Arena and WFC.Arena.Enable then WFC.Arena:Enable() end
+            WFC:Debug("Entered Arena. Events enabled.")
+        end
+    else
+        if WFC.inArena then
+            WFC.inArena = false
+            if WFC.Arena and WFC.Arena.Disable then WFC.Arena:Disable() end
+            if not WFC.inWSG then
+                if WFC.Tracker and WFC.Tracker.Disable then WFC.Tracker:Disable() end
+            end
+            WFC:Debug("Left Arena. Events disabled.")
         end
     end
 end
@@ -97,6 +141,16 @@ frame:SetScript("OnEvent", function()
         if not WSGFCConfig.frameX then WSGFCConfig.frameX = 0 end
         if not WSGFCConfig.frameY then WSGFCConfig.frameY = -150 end
         if WSGFCConfig.locked == nil then WSGFCConfig.locked = false end
+        
+        if WSGFCConfig.wsgEnabled == nil then WSGFCConfig.wsgEnabled = true end
+        if WSGFCConfig.arenaEnabled == nil then WSGFCConfig.arenaEnabled = true end
+        if WSGFCConfig.arenaDistance == nil then WSGFCConfig.arenaDistance = true end
+        if WSGFCConfig.arenaTrinkets == nil then WSGFCConfig.arenaTrinkets = true end
+        if not WSGFCConfig.minimapPos then WSGFCConfig.minimapPos = 45 end
+        if not WSGFCConfig.arenaFramePoint then WSGFCConfig.arenaFramePoint = "CENTER" end
+        if not WSGFCConfig.arenaFrameX then WSGFCConfig.arenaFrameX = 0 end
+        if not WSGFCConfig.arenaFrameY then WSGFCConfig.arenaFrameY = 0 end
+        if WSGFCConfig.arenaLocked == nil then WSGFCConfig.arenaLocked = false end
 
         -- Re-evaluate capability mod presence after all addons have loaded
         WFC.hasNampower = (GetNampowerVersion ~= nil)

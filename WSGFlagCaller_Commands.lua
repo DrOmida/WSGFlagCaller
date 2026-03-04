@@ -1,7 +1,8 @@
-SLASH_WSGFLAGCALLER1 = "/wsgflagcaller"
-SLASH_WSGFLAGCALLER2 = "/wfc"
+SLASH_TURTLEPVP1 = "/tpvp"
+SLASH_TURTLEPVP2 = "/wfc"
+SLASH_TURTLEPVP3 = "/turtlepvp"
 
-SlashCmdList["WSGFLAGCALLER"] = function(msg)
+SlashCmdList["TURTLEPVP"] = function(msg)
     local args = {}
     for word in string.gfind(msg, "[^%s]+") do
         table.insert(args, string.lower(word))
@@ -10,21 +11,17 @@ SlashCmdList["WSGFLAGCALLER"] = function(msg)
     local cmd = args[1]
     
     if cmd == "info" or not cmd then
-        WFC:Print("WSGFlagCaller Commands:")
-        WFC:Print("  /wfc hp on/off - Toggle HP callouts")
-        WFC:Print("  /wfc thresholds 75 50 25 - Set HP thresholds for callouts")
-        WFC:Print("  /wfc frame on/off - Show or hide the flag carrier HUD")
-        WFC:Print("  /wfc reset - Reset HUD position to default")
-        WFC:Print("  /wfc status - Show current settings")
-        WFC:Print("  /wfc debug on/off - Toggle debug messages")
-        WFC:Print("  /wfc force - Force-enable WSG mode (for testing)")
-    elseif cmd == "hp" then
-        WSGFCConfig.hpCallouts = (args[2] == "on")
-        WFC:Print("HP Callouts set to " .. tostring(args[2]))
-    elseif cmd == "frame" then
-        WSGFCConfig.showFrame = (args[2] == "on")
-        WFC:Print("Frame visibility set to " .. tostring(args[2]))
-        WFC.Frame:UpdateVisibility()
+        if WFC.Minimap and WFC.Minimap.TogglePanel then
+            WFC.Minimap:TogglePanel()
+        else
+            WFC:Print("TurtlePvP Commands:")
+            WFC:Print("  /tpvp - Open Config Panel")
+            WFC:Print("  /tpvp force wsg - Force-enable WSG mode")
+            WFC:Print("  /tpvp force arena - Force-enable Arena mode")
+            WFC:Print("  /tpvp reset - Reset HUD positions")
+            WFC:Print("  /tpvp status - Show current settings")
+            WFC:Print("  /tpvp debug on/off - Toggle debug messages")
+        end
     elseif cmd == "debug" then
         if args[2] == "on" then
             WSGFCConfig.debug = true
@@ -34,34 +31,38 @@ SlashCmdList["WSGFLAGCALLER"] = function(msg)
             WFC:Print("Debug mode disabled.")
         end
     elseif cmd == "force" then
-        WFC:CheckZone(true)
-        WFC:Print("Force-enabled WSG mode.")
+        if args[2] == "wsg" then
+            WFC:CheckZone(true)
+            WFC:Print("Force-enabled WSG mode.")
+        elseif args[2] == "arena" then
+            local z = GetZoneText()
+            -- spoof zone just for triggering check
+            WFC.inWSG = false
+            WFC.inArena = false
+            -- Since CheckZone forces WSG when force=true, we handle this manually:
+            WFC.inArena = true
+            if WFC.Tracker and WFC.Tracker.Enable then WFC.Tracker:Enable() end
+            if WFC.Arena and WFC.Arena.Enable then WFC.Arena:Enable() end
+            WFC:Debug("Force-entered Arena. Events enabled.")
+            WFC:Print("Force-enabled Arena mode.")
+        end
     elseif cmd == "reset" then
         WSGFCConfig.framePoint = "TOP"
         WSGFCConfig.frameX = 0
         WSGFCConfig.frameY = -150
-        if WSGFCHud then
-            WSGFCHud:SetPoint(WSGFCConfig.framePoint, UIParent, WSGFCConfig.framePoint, WSGFCConfig.frameX, WSGFCConfig.frameY)
-        end
-        WFC:Print("Frame position reset.")
-    elseif cmd == "thresholds" then
-        WSGFCConfig.hpThresholds = {}
-        for i=2, table.getn(args) do
-            local num = tonumber(args[i])
-            if num then
-                table.insert(WSGFCConfig.hpThresholds, num)
-            end
-        end
-        WFC:Print("HP Thresholds updated.")
+        WSGFCConfig.arenaFramePoint = "CENTER"
+        WSGFCConfig.arenaFrameX = 0
+        WSGFCConfig.arenaFrameY = 0
+        WFC:Print("Frame positions reset.")
     elseif cmd == "status" then
         local onOffStr = function(b) return b and "|cff00ff00[ON]|r" or "|cffff0000[OFF]|r" end
-        WFC:Print("=== WSG Flag Caller Status ===")
+        WFC:Print("=== TurtlePvP Status ===")
         local npStr = GetNampowerVersion and "|cff00ff00Yes|r" or "|cffff0000No|r"
         local unitXPStr = UnitXP and "|cff00ff00Yes|r" or "|cffff0000No|r"
         WFC:Print("Nampower (Guids/HP): " .. npStr)
         WFC:Print("UnitXP (Distance): " .. unitXPStr)
-        WFC:Print("HP Callouts: " .. onOffStr(WSGFCConfig.hpCallouts) .. " (Thresholds: " .. table.concat(WSGFCConfig.hpThresholds, ",") .. "%)")
-        WFC:Print("Frame: " .. onOffStr(WSGFCConfig.showFrame))
+        WFC:Print("WSG Caller: " .. onOffStr(WSGFCConfig.wsgEnabled))
+        WFC:Print("Arena HUD: " .. onOffStr(WSGFCConfig.arenaEnabled))
         WFC:Print("Debug: " .. onOffStr(WSGFCConfig.debug))
     end
 end

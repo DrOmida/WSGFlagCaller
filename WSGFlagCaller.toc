@@ -1,13 +1,15 @@
 ## Interface: 11200
-## Title: WSGFlagCaller
-## Notes: Warsong Gulch flag carrier tracker with HP callouts and distance
-## Author: adimo [tel'abim]
-## Version: 2.0.0
-## OptionalDeps: Nampower, UnitXP
+## Title: TurtlePvP
+## Notes: PvP utility toolkit: WSG Flag Caller + Arena Enemy Tracker
+## Version: 3.0.0
+## Author: DrOmida
 ## SavedVariables: WSGFCConfig
+## OptionalDeps: Nampower, UnitXP
 
 WSGFlagCaller_Core.lua
 WSGFlagCaller_Tracker.lua
+WSGFlagCaller_Minimap.lua
 WSGFlagCaller_Frame.lua
 WSGFlagCaller_Combat.lua
+WSGFlagCaller_Arena.lua
 WSGFlagCaller_Commands.lua

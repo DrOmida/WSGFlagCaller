@@ -163,7 +163,58 @@ function WFC.Frame:StopTicker()
     end
 end
 
+local function CheckUnitForFlag(unit)
+    if (WFC.allyCarrier and WFC.hordeCarrier) or not UnitExists(unit) then return end
+    local name = UnitName(unit)
+    if not name or name == "Unknown" then return end
+    
+    for i = 1, 32 do
+        local tex = UnitBuff(unit, i)
+        if not tex then break end
+        tex = string.lower(tex)
+        
+        -- Alliance Flag (carried by Horde)
+        if not WFC.allyCarrier and (string.find(tex, "inv_bannerpvp_02") or string.find(tex, "inv_banner_02")) then
+            WFC.allyCarrier = name
+            if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
+            WFC.Frame:UpdateVisibility()
+            WFC:Print("Scanner recovered Alliance Flag tracking on: " .. name)
+        end
+        
+        -- Horde Flag (carried by Alliance)
+        if not WFC.hordeCarrier and (string.find(tex, "inv_bannerpvp_01") or string.find(tex, "inv_banner_03")) then
+            WFC.hordeCarrier = name
+            if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
+            WFC.Frame:UpdateVisibility()
+            WFC:Print("Scanner recovered Horde Flag tracking on: " .. name)
+        end
+    end
+end
+
+function WFC.Frame:ScanMissingFlags()
+    if WFC.allyCarrier and WFC.hordeCarrier then return end
+    
+    local tokens = {"player", "target", "mouseover"}
+    for _, t in ipairs(tokens) do CheckUnitForFlag(t) end
+    
+    local numRaid = GetNumRaidMembers()
+    if numRaid > 0 then
+        for i=1, numRaid do
+            CheckUnitForFlag("raid"..i)
+            CheckUnitForFlag("raid"..i.."target")
+        end
+    else
+        for i=1, GetNumPartyMembers() do
+            CheckUnitForFlag("party"..i)
+            CheckUnitForFlag("party"..i.."target")
+        end
+    end
+end
+
 function WFC.Frame:OnTick()
+    -- Recover missing flag targets implicitly from buffs (for late joiners or missed events)
+    WFC.Frame:ScanMissingFlags()
+
     WFC.Frame:UpdateRowHP(hud.allyRow, WFC.allyCarrier)
     WFC.Frame:UpdateRowHP(hud.hordeRow, WFC.hordeCarrier)
 end
