@@ -639,6 +639,16 @@ end
 local eventFrame = CreateFrame("Frame")
 
 local function TriggerPullTimer()
+    -- Only trigger pull if we are Raid Leader/Officer or Party Leader, or Solo
+    local isLeader = true
+    if GetNumRaidMembers() > 0 then
+        isLeader = IsRaidLeader() or IsRaidOfficer()
+    elseif GetNumPartyMembers() > 0 then
+        isLeader = IsPartyLeader()
+    end
+    
+    if not isLeader then return end
+
     if SlashCmdList then
         for name, func in pairs(SlashCmdList) do
             local i = 1
