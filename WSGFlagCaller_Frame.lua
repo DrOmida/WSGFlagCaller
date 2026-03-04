@@ -225,22 +225,97 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
     local hp = 0
     local hpMax = 100
     local found = false
-    local classColor = nil
     local targetId = nil
     local guid = WFC.Tracker and WFC.Tracker:GetGUID(carrierName) or nil
+    
+    -- ── Step 0: Actively try to find / seed the carrier GUID this tick ──
+    -- Even if Tracker already has it, we try every tick to keep it warm.
+    local function TrySeekCarrier()
+        local checkTokens = {"target", "mouseover", "targettarget"}
+        for _, t in ipairs(checkTokens) do
+            if UnitExists(t) and UnitName(t) == carrierName then
+                if GetUnitGUID then
+                    local g = GetUnitGUID(t)
+                    if g then
+                        if WFC.Tracker then WFC.Tracker:ProcessGUID(g) end
+                        if not guid then guid = g end
+                    end
+                end
+                if not targetId then targetId = t end
+            end
+        end
+        
+        local numRaid = GetNumRaidMembers()
+        if numRaid > 0 then
+            for i = 1, numRaid do
+                for _, suffix in ipairs({"", "target"}) do
+                    local t = "raid"..i..suffix
+                    if UnitExists(t) and UnitName(t) == carrierName then
+                        if GetUnitGUID then
+                            local g = GetUnitGUID(t)
+                            if g then
+                                if WFC.Tracker then WFC.Tracker:ProcessGUID(g) end
+                                if not guid then guid = g end
+                            end
+                        end
+                        if not targetId then targetId = t end
+                    end
+                end
+            end
+        else
+            for i = 1, GetNumPartyMembers() do
+                for _, suffix in ipairs({"", "target"}) do
+                    local t = "party"..i..suffix
+                    if UnitExists(t) and UnitName(t) == carrierName then
+                        if GetUnitGUID then
+                            local g = GetUnitGUID(t)
+                            if g then
+                                if WFC.Tracker then WFC.Tracker:ProcessGUID(g) end
+                                if not guid then guid = g end
+                            end
+                        end
+                        if not targetId then targetId = t end
+                    end
+                end
+            end
+        end
+        
+        -- Nameplate GUID harvest (Nampower extension: frame:GetName(1) returns GUID)
+        if not guid and GetUnitGUID then
+            local children = { WorldFrame:GetChildren() }
+            for _, child in ipairs(children) do
+                if child.GetName then
+                    local g = child:GetName(1)
+                    if type(g) == "string" and string.sub(g, 1, 2) == "0x" then
+                        local n = UnitName(g)
+                        if n == carrierName then
+                            if WFC.Tracker then WFC.Tracker:ProcessGUID(g) end
+                            guid = g
+                        end
+                    end
+                end
+            end
+        end
+    end
+    TrySeekCarrier()
 
-    -- 1. Try resolving distance via Nampower/UnitXP if we have GUID
-    if guid and UnitXP then
-        local success, distance = pcall(function()
-            return UnitXP("distanceBetween", "player", guid)
-        end)
-        if success and distance then
-            if distance <= 20 then
-                row.distText:SetText(string.format("|cffff0000%d yd|r", distance))
-            elseif distance <= 40 then
-                row.distText:SetText(string.format("|cffffff00%d yd|r", distance))
+    -- ── Step 1: Distance via GUID first, token second ──
+    if UnitXP then
+        local distTarget = guid or targetId
+        if distTarget then
+            local success, distance = pcall(function()
+                return UnitXP("distanceBetween", "player", distTarget)
+            end)
+            if success and type(distance) == "number" then
+                if distance <= 20 then
+                    row.distText:SetText(string.format("|cffff0000%d yd|r", distance))
+                elseif distance <= 40 then
+                    row.distText:SetText(string.format("|cffffff00%d yd|r", distance))
+                else
+                    row.distText:SetText(string.format("|cffffffff%d yd|r", distance))
+                end
             else
-                row.distText:SetText(string.format("|cffffffff%d yd|r", distance))
+                row.distText:SetText("|cff888888? yd|r")
             end
         else
             row.distText:SetText("--")

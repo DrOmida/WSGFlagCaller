@@ -1,202 +1,350 @@
+--[[
+WSGFlagCaller_Minimap.lua
+Minimap button + tabbed settings panel for TurtlePvP
+Styled after TurtleHonorSpyEnhanced overlay.lua (dark tooltip backdrop, gold title)
+--]]
+
 WFC.Minimap = {}
 
+-- ========================
+-- Panel style constants
+-- ========================
+local PANEL_W, PANEL_H = 310, 220
+local DARK_BG = { 0, 0, 0, 0.88 }
+local BORDER_COLOR = { 0.4, 0.4, 0.4, 1 }
+local GOLD = "|cffffd700"
+local TAB_ACTIVE_COLOR = { 1, 0.82, 0, 1 }    -- gold
+local TAB_INACTIVE_COLOR = { 0.6, 0.6, 0.6, 1 } -- grey
+
+-- ========================
+-- Minimap Button
+-- ========================
 local mmButton = CreateFrame("Button", "TurtlePvPMinimapButton", Minimap)
 mmButton:SetWidth(31)
 mmButton:SetHeight(31)
-mmButton:SetFrameStrata("LOW")
+mmButton:SetFrameStrata("MEDIUM")
 mmButton:SetHighlightTexture("Interface\\Minimap\\UI-Minimap-ZoomButton-Highlight")
 
-local icon = mmButton:CreateTexture(nil, "BACKGROUND")
-icon:SetTexture("Interface\\Icons\\Ability_DualWield")
-icon:SetWidth(20)
-icon:SetHeight(20)
-icon:SetPoint("TOPLEFT", mmButton, "TOPLEFT", 6, -5)
+-- Red circle backdrop
+local mmBg = mmButton:CreateTexture(nil, "BACKGROUND")
+mmBg:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
+mmBg:SetWidth(22)
+mmBg:SetHeight(22)
+mmBg:SetPoint("CENTER")
+mmBg:SetVertexColor(0.65, 0.07, 0.07, 1)
 
-local bg = mmButton:CreateTexture(nil, "ARTWORK")
-bg:SetTexture("Interface\\TargetingFrame\\UI-StatusBar")
-bg:SetVertexColor(0.8, 0.1, 0.1, 1) -- Red background
-bg:SetWidth(20)
-bg:SetHeight(20)
-bg:SetPoint("TOPLEFT", mmButton, "TOPLEFT", 6, -5)
-icon:SetDrawLayer("OVERLAY")
+-- Swords icon on top
+local mmIcon = mmButton:CreateTexture(nil, "ARTWORK")
+mmIcon:SetTexture("Interface\\Icons\\Ability_DualWield")
+mmIcon:SetWidth(20)
+mmIcon:SetHeight(20)
+mmIcon:SetPoint("CENTER")
 
-local border = mmButton:CreateTexture(nil, "OVERLAY")
-border:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
-border:SetWidth(53)
-border:SetHeight(53)
-border:SetPoint("TOPLEFT", mmButton, "TOPLEFT", 0, 0)
+-- Circular border
+local mmBorder = mmButton:CreateTexture(nil, "OVERLAY")
+mmBorder:SetTexture("Interface\\Minimap\\MiniMap-TrackingBorder")
+mmBorder:SetWidth(53)
+mmBorder:SetHeight(53)
+mmBorder:SetPoint("CENTER")
+
+-- Tooltip
+mmButton:SetScript("OnEnter", function()
+    GameTooltip:SetOwner(this, "ANCHOR_LEFT")
+    GameTooltip:SetText(GOLD.."TurtlePvP|r")
+    GameTooltip:AddLine("Left-click to open settings", 1, 1, 1)
+    GameTooltip:AddLine("Right-click for quick options", 0.8, 0.8, 0.8)
+    GameTooltip:Show()
+end)
+mmButton:SetScript("OnLeave", function() GameTooltip:Hide() end)
+
+-- Right-click context menu
+local menuItems = {
+    { text = GOLD.."TurtlePvP|r",                notCheckable = 1, isTitle = 1 },
+    { text = "Toggle WSG Caller",     notCheckable = 1,
+        func = function()
+            WSGFCConfig.wsgEnabled = not WSGFCConfig.wsgEnabled
+            WFC:CheckZone(true)
+            WFC:Print("WSG Caller " .. (WSGFCConfig.wsgEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
+        end },
+    { text = "Toggle Arena HUD",      notCheckable = 1,
+        func = function()
+            WSGFCConfig.arenaEnabled = not WSGFCConfig.arenaEnabled
+            WFC:CheckZone(true)
+            WFC:Print("Arena HUD " .. (WSGFCConfig.arenaEnabled and "|cff00ff00Enabled|r" or "|cffff0000Disabled|r"))
+        end },
+    { text = "Reset Frame Positions", notCheckable = 1,
+        func = function()
+            WSGFCConfig.framePoint = "TOP"
+            WSGFCConfig.frameX = 0
+            WSGFCConfig.frameY = -150
+            WSGFCConfig.arenaFramePoint = "CENTER"
+            WSGFCConfig.arenaFrameX = 0
+            WSGFCConfig.arenaFrameY = 0
+            WFC:Print("Frame positions reset.")
+        end },
+    { text = "Open Settings",         notCheckable = 1,
+        func = function() WFC.Minimap:TogglePanel() end },
+}
+local contextMenu = CreateFrame("Frame", "TurtlePvPContextMenu", UIParent, "UIDropDownMenuTemplate")
+UIDropDownMenu_Initialize(contextMenu, function()
+    for _, item in ipairs(menuItems) do
+        local info = {}
+        info.text = item.text
+        info.notCheckable = item.notCheckable
+        info.isTitle = item.isTitle
+        info.func = item.func
+        UIDropDownMenu_AddButton(info)
+    end
+end, "MENU")
 
 mmButton:RegisterForClicks("LeftButtonUp", "RightButtonUp")
 mmButton:SetScript("OnClick", function()
     if arg1 == "LeftButton" then
         WFC.Minimap:TogglePanel()
     else
-        WFC:Print("TurtlePvP v3. Minimap button.")
+        ToggleDropDownMenu(1, nil, contextMenu, "cursor", 0, 0)
     end
 end)
 
+-- Draggable position around minimap
 local function UpdateMinimapPos()
     local angle = math.rad(WSGFCConfig.minimapPos or 45)
-    local x = math.cos(angle) * 80
-    local y = math.sin(angle) * 80
-    mmButton:SetPoint("CENTER", Minimap, "CENTER", x, y)
+    local r = 80
+    mmButton:SetPoint("CENTER", Minimap, "CENTER", math.cos(angle)*r, math.sin(angle)*r)
 end
-
-mmButton:SetScript("OnUpdate", function()
-    if arg1 then this.elapsed = (this.elapsed or 0) + arg1 else return end
-    if this.elapsed > 0.1 then
-        this.elapsed = 0
-        UpdateMinimapPos()
-    end
-end)
+UpdateMinimapPos()
 
 mmButton:RegisterForDrag("LeftButton")
-mmButton:SetScript("OnDragStart", function()
-    this.dragging = true
+mmButton:SetMovable(true)
+mmButton:SetScript("OnDragStart", function() this.dragging = true end)
+mmButton:SetScript("OnDragStop",  function() this.dragging = false end)
+
+local dragF = CreateFrame("Frame")
+dragF:SetScript("OnUpdate", function()
+    if not mmButton.dragging then return end
+    local mx, my = Minimap:GetCenter()
+    local px, py = GetCursorPosition()
+    local s = UIParent:GetEffectiveScale()
+    px, py = px/s, py/s
+    WSGFCConfig.minimapPos = math.deg(math.atan2(py - my, px - mx))
+    UpdateMinimapPos()
 end)
 
-mmButton:SetScript("OnDragStop", function()
-    this.dragging = false
-end)
+-- ========================
+-- Helper: Create styled backdrop Frame
+-- ========================
+local function MakePanel(name, parent, w, h)
+    local f = CreateFrame("Frame", name, parent)
+    f:SetWidth(w)
+    f:SetHeight(h)
+    f:SetBackdrop({
+        bgFile   = "Interface\\Tooltips\\UI-Tooltip-Background",
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        tile = true, tileSize = 16, edgeSize = 16,
+        insets = { left = 4, right = 4, top = 4, bottom = 4 },
+    })
+    f:SetBackdropColor(DARK_BG[1], DARK_BG[2], DARK_BG[3], DARK_BG[4])
+    f:SetBackdropBorderColor(BORDER_COLOR[1], BORDER_COLOR[2], BORDER_COLOR[3], BORDER_COLOR[4])
+    return f
+end
 
-local dragFrame = CreateFrame("Frame")
-dragFrame:SetScript("OnUpdate", function()
-    if mmButton.dragging then
-        local mx, my = Minimap:GetCenter()
-        local px, py = GetCursorPosition()
-        local scale = Minimap:GetEffectiveScale()
-        px = px / scale
-        py = py / scale
-        local angle = math.atan2(py - my, px - mx)
-        WSGFCConfig.minimapPos = math.deg(angle)
-        UpdateMinimapPos()
-    end
-end)
+-- ========================
+-- Helper: Styled Checkbox
+-- ========================
+local function MakeCheck(parent, label, x, y, onClickFn)
+    local cb = CreateFrame("CheckButton", nil, parent, "UICheckButtonTemplate")
+    cb:SetWidth(20)
+    cb:SetHeight(20)
+    cb:SetPoint("TOPLEFT", parent, "TOPLEFT", x, y)
+    local txt = cb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    txt:SetPoint("LEFT", cb, "RIGHT", 4, 0)
+    txt:SetText(label)
+    cb:SetScript("OnClick", onClickFn)
+    return cb
+end
 
--- Configuration Panel
-local panel = CreateFrame("Frame", "TurtlePvPConfigPanel", UIParent)
-panel:SetWidth(300)
-panel:SetHeight(200)
-panel:SetPoint("CENTER", 0, 0)
-panel:SetBackdrop({
-    bgFile = "Interface\\DialogFrame\\UI-DialogBox-Background",
-    edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-    tile = true, tileSize = 32, edgeSize = 32,
-    insets = { left = 11, right = 12, top = 12, bottom = 11 }
-})
-panel:EnableMouse(true)
+-- ========================
+-- Main Config Panel
+-- ========================
+local panel = MakePanel("TurtlePvPConfigPanel", UIParent, PANEL_W, PANEL_H)
+panel:SetPoint("CENTER", 0, 50)
+panel:SetFrameStrata("HIGH")
 panel:SetMovable(true)
+panel:EnableMouse(true)
+panel:SetClampedToScreen(true)
 panel:RegisterForDrag("LeftButton")
 panel:SetScript("OnDragStart", function() this:StartMoving() end)
-panel:SetScript("OnDragStop", function() this:StopMovingOrSizing() end)
+panel:SetScript("OnDragStop",  function() this:StopMovingOrSizing() end)
 panel:Hide()
 
-local title = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
-title:SetPoint("TOP", 0, -15)
-title:SetText("TurtlePvP Settings")
+-- Gold title
+local titleText = panel:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+titleText:SetPoint("TOPLEFT", 14, -10)
+titleText:SetText(GOLD.."TurtlePvP|r Settings")
 
+-- Version
+local verText = panel:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+verText:SetPoint("TOPRIGHT", -36, -12)
+verText:SetText("|cff888888v3.1|r")
+
+-- Close button
 local closeBtn = CreateFrame("Button", nil, panel, "UIPanelCloseButton")
-closeBtn:SetPoint("TOPRIGHT", -5, -5)
+closeBtn:SetWidth(22)
+closeBtn:SetHeight(22)
+closeBtn:SetPoint("TOPRIGHT", -2, -2)
 
-local tabWSG = CreateFrame("Button", "TurtlePvPTab1", panel, "CharacterFrameTabButtonTemplate")
-tabWSG:SetPoint("BOTTOMLEFT", panel, "TOPLEFT", 10, -5)
-tabWSG:SetText("WSG Caller")
+-- Divider line under title
+local divider = panel:CreateTexture(nil, "ARTWORK")
+divider:SetTexture("Interface\\Tooltips\\UI-Tooltip-Border")
+divider:SetHeight(1)
+divider:SetPoint("TOPLEFT", 8, -28)
+divider:SetPoint("TOPRIGHT", -8, -28)
+divider:SetVertexColor(0.4, 0.4, 0.4, 0.8)
 
-local tabArena = CreateFrame("Button", "TurtlePvPTab2", panel, "CharacterFrameTabButtonTemplate")
-tabArena:SetPoint("LEFT", tabWSG, "RIGHT", -15, 0)
-tabArena:SetText("Arena HUD")
+-- ========================
+-- Tab buttons (custom styled)
+-- ========================
+local tabs = {}
+local tabPages = {}
+local function SelectTab(idx)
+    for i, t in ipairs(tabs) do
+        if i == idx then
+            t:SetNormalFontObject("GameFontHighlight")
+            local f = t:GetFontString()
+            if f then f:SetTextColor(TAB_ACTIVE_COLOR[1], TAB_ACTIVE_COLOR[2], TAB_ACTIVE_COLOR[3]) end
+            t.underline:Show()
+            if tabPages[i] then tabPages[i]:Show() end
+        else
+            local f = t:GetFontString()
+            if f then f:SetTextColor(TAB_INACTIVE_COLOR[1], TAB_INACTIVE_COLOR[2], TAB_INACTIVE_COLOR[3]) end
+            t.underline:Hide()
+            if tabPages[i] then tabPages[i]:Hide() end
+        end
+    end
+end
 
--- WSG Tab Content
-local wsgFrame = CreateFrame("Frame", nil, panel)
-wsgFrame:SetWidth(280)
-wsgFrame:SetHeight(150)
-wsgFrame:SetPoint("TOPLEFT", 10, -35)
+local TAB_LABELS = { "WSG Caller", "Arena HUD", "EFC Report" }
+local tabStart = 12
+for i, label in ipairs(TAB_LABELS) do
+    local tb = CreateFrame("Button", nil, panel)
+    tb:SetHeight(18)
+    tb:SetWidth(80)
+    tb:SetPoint("TOPLEFT", panel, "TOPLEFT", tabStart + (i-1)*86, -32)
+    local fs = tb:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    fs:SetAllPoints()
+    fs:SetText(label)
+    fs:SetJustifyH("CENTER")
+    -- underline indicator
+    local ul = tb:CreateTexture(nil, "ARTWORK")
+    ul:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
+    ul:SetHeight(2)
+    ul:SetPoint("BOTTOMLEFT", tb, "BOTTOMLEFT", 2, 0)
+    ul:SetPoint("BOTTOMRIGHT", tb, "BOTTOMRIGHT", -2, 0)
+    ul:SetVertexColor(TAB_ACTIVE_COLOR[1], TAB_ACTIVE_COLOR[2], TAB_ACTIVE_COLOR[3], 1)
+    ul:Hide()
+    tb.underline = ul
+    local idx = i
+    tb:SetScript("OnClick", function() SelectTab(idx) end)
+    table.insert(tabs, tb)
+end
 
-local chkWSGEnable = CreateFrame("CheckButton", "TurtlePvPChkWSGEnable", wsgFrame, "UICheckButtonTemplate")
-chkWSGEnable:SetPoint("TOPLEFT", 10, -10)
-_G[chkWSGEnable:GetName().."Text"]:SetText("Enable WSG Flag Caller")
-chkWSGEnable:SetScript("OnClick", function()
+-- Thin horizontal separator under tabs
+local tabDiv = panel:CreateTexture(nil, "ARTWORK")
+tabDiv:SetTexture("Interface\\ChatFrame\\ChatFrameBackground")
+tabDiv:SetHeight(1)
+tabDiv:SetPoint("TOPLEFT", 8, -52)
+tabDiv:SetPoint("TOPRIGHT", -8, -52)
+tabDiv:SetVertexColor(0.35, 0.35, 0.35, 1)
+
+-- ========================
+-- TAB 1: WSG Caller
+-- ========================
+local wsgPage = CreateFrame("Frame", nil, panel)
+wsgPage:SetPoint("TOPLEFT", 8, -56)
+wsgPage:SetPoint("BOTTOMRIGHT", -8, 8)
+table.insert(tabPages, wsgPage)
+
+local chkWSG = MakeCheck(wsgPage, "Enable WSG Flag Caller", 8, -8, function()
     WSGFCConfig.wsgEnabled = this:GetChecked()
     WFC:CheckZone(true)
 end)
 
-local chkHPCallouts = CreateFrame("CheckButton", "TurtlePvPChkHPCallouts", wsgFrame, "UICheckButtonTemplate")
-chkHPCallouts:SetPoint("TOPLEFT", 30, -40)
-_G[chkHPCallouts:GetName().."Text"]:SetText("Enemy HP Callouts (/bg)")
-chkHPCallouts:SetScript("OnClick", function() WSGFCConfig.hpCallouts = this:GetChecked() end)
+local chkHP = MakeCheck(wsgPage, "Enemy HP Callouts in /bg", 24, -36, function()
+    WSGFCConfig.hpCallouts = this:GetChecked()
+end)
 
-local chkWSGFrame = CreateFrame("CheckButton", "TurtlePvPChkWSGFrame", wsgFrame, "UICheckButtonTemplate")
-chkWSGFrame:SetPoint("TOPLEFT", 30, -70)
-_G[chkWSGFrame:GetName().."Text"]:SetText("Show Flag HUD")
-chkWSGFrame:SetScript("OnClick", function() 
+local chkFrame = MakeCheck(wsgPage, "Show Flag Carrier HUD", 24, -60, function()
     WSGFCConfig.showFrame = this:GetChecked()
     if WFC.Frame.UpdateVisibility then WFC.Frame:UpdateVisibility() end
 end)
 
--- Arena Tab Content
-local arenaFrame = CreateFrame("Frame", nil, panel)
-arenaFrame:SetWidth(280)
-arenaFrame:SetHeight(150)
-arenaFrame:SetPoint("TOPLEFT", 10, -35)
-arenaFrame:Hide()
+local threshLabel = wsgPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+threshLabel:SetPoint("TOPLEFT", 24, -88)
+threshLabel:SetText("|cffaaaaaa HP Threshold callouts:|r  75 / 50 / 25 %")
 
-local chkArenaEnable = CreateFrame("CheckButton", "TurtlePvPChkArenaEnable", arenaFrame, "UICheckButtonTemplate")
-chkArenaEnable:SetPoint("TOPLEFT", 10, -10)
-_G[chkArenaEnable:GetName().."Text"]:SetText("Enable Arena Enemy HUD")
-chkArenaEnable:SetScript("OnClick", function() 
-    WSGFCConfig.arenaEnabled = this:GetChecked() 
+-- ========================
+-- TAB 2: Arena HUD
+-- ========================
+local arenaPage = CreateFrame("Frame", nil, panel)
+arenaPage:SetPoint("TOPLEFT", 8, -56)
+arenaPage:SetPoint("BOTTOMRIGHT", -8, 8)
+table.insert(tabPages, arenaPage)
+
+local chkArena = MakeCheck(arenaPage, "Enable Arena Enemy HUD", 8, -8, function()
+    WSGFCConfig.arenaEnabled = this:GetChecked()
     WFC:CheckZone(true)
 end)
 
-local chkArenaDist = CreateFrame("CheckButton", "TurtlePvPChkArenaDist", arenaFrame, "UICheckButtonTemplate")
-chkArenaDist:SetPoint("TOPLEFT", 30, -40)
-_G[chkArenaDist:GetName().."Text"]:SetText("Show Distance (req UnitXP)")
-chkArenaDist:SetScript("OnClick", function() 
-    WSGFCConfig.arenaDistance = this:GetChecked() 
-    if WFC.Arena.UpdateHUD then WFC.Arena:UpdateHUD() end
+local chkDist = MakeCheck(arenaPage, "Show Distance  (requires UnitXP)", 24, -36, function()
+    WSGFCConfig.arenaDistance = this:GetChecked()
 end)
 
-local chkArenaTrinkets = CreateFrame("CheckButton", "TurtlePvPChkArenaTrinkets", arenaFrame, "UICheckButtonTemplate")
-chkArenaTrinkets:SetPoint("TOPLEFT", 30, -70)
-_G[chkArenaTrinkets:GetName().."Text"]:SetText("Track Trinkets/Racials (req Nampower)")
-chkArenaTrinkets:SetScript("OnClick", function() WSGFCConfig.arenaTrinkets = this:GetChecked() end)
-
--- Tab Switching Logic
-tabWSG:SetScript("OnClick", function()
-    PanelTemplates_SelectTab(tabWSG)
-    PanelTemplates_DeselectTab(tabArena)
-    wsgFrame:Show()
-    arenaFrame:Hide()
+local chkTrinkets = MakeCheck(arenaPage, "Track Trinkets / Racials  (requires Nampower)", 24, -60, function()
+    WSGFCConfig.arenaTrinkets = this:GetChecked()
 end)
 
-tabArena:SetScript("OnClick", function()
-    PanelTemplates_SelectTab(tabArena)
-    PanelTemplates_DeselectTab(tabWSG)
-    arenaFrame:Show()
-    wsgFrame:Hide()
+local arenaNote = arenaPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+arenaNote:SetPoint("TOPLEFT", 24, -88)
+arenaNote:SetText("|cff888888Auto-activates in TurtleWoW arena zones.\nUse /tpvp force arena to test.|r")
+
+-- ========================
+-- TAB 3: EFC Report (placeholder — populated by WSGFlagCaller_EFCReport.lua)
+-- ========================
+local efcPage = CreateFrame("Frame", nil, panel)
+efcPage:SetPoint("TOPLEFT", 8, -56)
+efcPage:SetPoint("BOTTOMRIGHT", -8, 8)
+table.insert(tabPages, efcPage)
+
+local efcNote = efcPage:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+efcNote:SetPoint("TOPLEFT", 8, -8)
+efcNote:SetText(GOLD.."EFC Location Reporter|r\n|cffaaaaaaOnly active in Warsong Gulch.\nClick a location button to announce\nthe enemy flag carrier's position in /bg.|r")
+
+local efcOpenBtn = CreateFrame("Button", nil, efcPage, "UIPanelButtonTemplate")
+efcOpenBtn:SetWidth(130)
+efcOpenBtn:SetHeight(22)
+efcOpenBtn:SetPoint("TOPLEFT", 8, -80)
+efcOpenBtn:SetText("Open EFC Panel")
+efcOpenBtn:SetScript("OnClick", function()
+    if WFC.EFCReport and WFC.EFCReport.Toggle then
+        WFC.EFCReport:Toggle()
+    end
 end)
 
--- Init values
+WFC.Minimap.efcPage = efcPage  -- let EFCReport module inject more controls here
+
+-- ========================
+-- Sync checkboxes on open
+-- ========================
 panel:SetScript("OnShow", function()
-    chkWSGEnable:SetChecked(WSGFCConfig.wsgEnabled)
-    chkHPCallouts:SetChecked(WSGFCConfig.hpCallouts)
-    chkWSGFrame:SetChecked(WSGFCConfig.showFrame)
-    
-    chkArenaEnable:SetChecked(WSGFCConfig.arenaEnabled)
-    chkArenaDist:SetChecked(WSGFCConfig.arenaDistance)
-    chkArenaTrinkets:SetChecked(WSGFCConfig.arenaTrinkets)
-    
-    PanelTemplates_TabResize(10, tabWSG)
-    PanelTemplates_TabResize(10, tabArena)
-    PanelTemplates_SetNumTabs(panel, 2)
-    
-    tabWSG:Click()
+    chkWSG:SetChecked(WSGFCConfig.wsgEnabled)
+    chkHP:SetChecked(WSGFCConfig.hpCallouts)
+    chkFrame:SetChecked(WSGFCConfig.showFrame)
+    chkArena:SetChecked(WSGFCConfig.arenaEnabled)
+    chkDist:SetChecked(WSGFCConfig.arenaDistance)
+    chkTrinkets:SetChecked(WSGFCConfig.arenaTrinkets)
+    SelectTab(1)
 end)
 
 function WFC.Minimap:TogglePanel()
-    if panel:IsVisible() then
-        panel:Hide()
-    else
-        panel:Show()
-    end
+    if panel:IsVisible() then panel:Hide() else panel:Show() end
 end
