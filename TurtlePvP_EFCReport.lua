@@ -11,7 +11,7 @@ WFC.EFCReport = {
     created = false,
 }
 
-local iconPath = "Interface\\AddOns\\WSGFlagCaller\\Icons\\"
+local iconPath = "Interface\\AddOns\\TurtlePvP\\Icons\\"
 
 -- 23 WSG location buttons (original EFCReport layout, index [1]=Alliance, [2]=Horde)
 local BUTTONS = {
@@ -119,10 +119,11 @@ function WFC.EFCReport:Create()
         -- Figure out which carrier is the enemy FC
         local myFaction = UnitFactionGroup("player")
         local efcName = nil
+        -- If I am Alliance, the enemy FC is holding the Alliance flag (WFC.allyCarrier)
         if myFaction == "Alliance" then
-            efcName = WFC.hordeCarrier   -- enemy is Horde
-        else
             efcName = WFC.allyCarrier
+        else
+            efcName = WFC.hordeCarrier
         end
 
         if not efcName then

@@ -56,7 +56,7 @@ function WFC:Debug(msg)
 end
 
 function WFC:Print(msg)
-    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[WSGFlagCaller]|r " .. tostring(msg))
+    DEFAULT_CHAT_FRAME:AddMessage("|cff33ff99[TurtlePvP]|r " .. tostring(msg))
 end
 
 function WFC:Announce(msg)
