@@ -46,6 +46,11 @@ function WFC.Frame:CreateRow(parent, yOffset, label)
     hpBar:SetMinMaxValues(0, 100)
     hpBar:SetValue(100)
     row.hpBar = hpBar
+
+    local hpText = hpBar:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
+    hpText:SetPoint("CENTER", hpBar, "CENTER", 0, 0)
+    hpText:SetText("100%")
+    row.hpText = hpText
     
     local distText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightSmall")
     distText:SetPoint("RIGHT", hpBar, "LEFT", -5, 0)
@@ -123,6 +128,7 @@ function WFC.Frame:UpdateVisibility()
         hud.allyRow.hpBar:SetMinMaxValues(0, 100)
         hud.allyRow.hpBar:SetValue(0)
         hud.allyRow.hpBar:SetStatusBarColor(0.5, 0.5, 0.5)
+        hud.allyRow.hpText:SetText("--")
         hud.allyRow.distText:SetText("--")
         hud.allyRow:Show()
     end
@@ -137,6 +143,7 @@ function WFC.Frame:UpdateVisibility()
         hud.hordeRow.hpBar:SetMinMaxValues(0, 100)
         hud.hordeRow.hpBar:SetValue(0)
         hud.hordeRow.hpBar:SetStatusBarColor(0.5, 0.5, 0.5)
+        hud.hordeRow.hpText:SetText("--")
         hud.hordeRow.distText:SetText("--")
         hud.hordeRow:Show()
     end
@@ -401,6 +408,8 @@ function WFC.Frame:UpdateRowHP(row, carrierName)
         row.hpBar:SetMinMaxValues(0, hpMax)
         row.hpBar:SetValue(hp)
         local pct = hp / hpMax
+        row.hpText:SetText(math.floor(pct * 100) .. "%")
+
         if pct > 0.5 then
             row.hpBar:SetStatusBarColor(0, 1, 0)
         elseif pct > 0.25 then
