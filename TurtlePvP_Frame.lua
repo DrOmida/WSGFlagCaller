@@ -171,9 +171,11 @@ function WFC.Frame:StopTicker()
 end
 
 local function CheckUnitForFlag(unit)
-    if (WFC.allyCarrier and WFC.hordeCarrier) or not UnitExists(unit) then return end
+    if (WFC.allyCarrier and WFC.hordeCarrier) or not UnitExists(unit) or not UnitIsPlayer(unit) then return end
     local name = UnitName(unit)
     if not name or name == "Unknown" then return end
+    
+    local faction = UnitFactionGroup(unit)
     
     for i = 1, 32 do
         local tex = UnitBuff(unit, i)
@@ -182,18 +184,22 @@ local function CheckUnitForFlag(unit)
         
         -- Alliance Flag (carried by Horde)
         if not WFC.allyCarrier and (string.find(tex, "inv_bannerpvp_02") or string.find(tex, "inv_banner_02")) then
-            WFC.allyCarrier = name
-            if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
-            WFC.Frame:UpdateVisibility()
-            WFC:Print("Scanner recovered Alliance Flag tracking on: " .. name)
+            if faction ~= "Alliance" then
+                WFC.allyCarrier = name
+                if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
+                WFC.Frame:UpdateVisibility()
+                WFC:Print("Scanner recovered Alliance Flag tracking on: " .. name)
+            end
         end
         
         -- Horde Flag (carried by Alliance)
         if not WFC.hordeCarrier and (string.find(tex, "inv_bannerpvp_01") or string.find(tex, "inv_banner_03")) then
-            WFC.hordeCarrier = name
-            if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
-            WFC.Frame:UpdateVisibility()
-            WFC:Print("Scanner recovered Horde Flag tracking on: " .. name)
+            if faction ~= "Horde" then
+                WFC.hordeCarrier = name
+                if WFC.Combat and WFC.Combat.ResetPhases then WFC.Combat:ResetPhases(name) end
+                WFC.Frame:UpdateVisibility()
+                WFC:Print("Scanner recovered Horde Flag tracking on: " .. name)
+            end
         end
     end
 end
